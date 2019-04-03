@@ -1,6 +1,28 @@
 <!-- 用户组列表 -->
 <template>
   <div style="height: 100%;">
+    <Row :gutter="16" class="margin-bottom">
+      <Col span="14">
+      <Button
+        type="primary"
+        @click="isShowGroupModal = true"
+      >
+        添加已有用户组
+      </Button>
+      </Col>
+      <Col span="10">
+      <Input
+        placeholder="搜索用户组"
+        v-model="group.filterName"
+        @on-change="onSearchClick"></Input>
+      </Col>
+    </Row>
+    <GroupEdit
+      :currentRole="currentRole"
+      :isShowGroupModal="isShowGroupModal"
+      v-if="currentRole"
+      @on-submit="reloadGroupList"
+      @on-close="isShowGroupModal = false" />
     <Table
       :columns="group.columns"
       :data="group.data"
@@ -16,7 +38,8 @@
 </template>
 <script>
 // eslint-disable-next-line
-import { Table, Page, Icon } from 'iview'
+import { Table, Page, Icon, Col, Row, Button, Input } from 'iview'
+import GroupEdit from './GroupEdit.vue'
 
 import { api } from '../api'
 
@@ -24,7 +47,12 @@ export default {
   name: 'GroupList',
   components: {
     Table,
-    Page
+    Page,
+    Row,
+    Col,
+    Button,
+    Input,
+    GroupEdit
   },
   props: {
     currentRole: {
@@ -33,15 +61,13 @@ export default {
       default: () => {
         return {}
       }
-    },
-    isReloadGroupList: {
-      type: Boolean,
-      required: false
     }
   },
   data () {
     return {
+      isShowGroupModal: false,
       group: {
+        filterName: '',
         page: 1,
         size: 10,
         total: 0,
@@ -62,7 +88,7 @@ export default {
                   },
                   on: {
                     click: () => {
-                      this.deleteUser(params.row.name)
+                      this.deleteGroup(params.row.name)
                     }
                   }
                 },
@@ -95,14 +121,6 @@ export default {
           this.getGroupList()
         }
       }
-    },
-    isReloadGroupList: {
-      handler (curVal, oldVal) {
-        if (this.currentRole) {
-          // 添加用户组后刷新用户组列表页面
-          this.getGroupList()
-        }
-      }
     }
   },
   mounted () {
@@ -123,6 +141,9 @@ export default {
       let { page, size } = this.group
       let name = this.currentRole.name
 
+      if (this.group.filterName) {
+        // url + 过滤条件
+      }
       this.$axios.get(`${api.users}/?page=${page}&size=${size}&rolename=${name}`).then(res => {
         this.group.data = res.data.result
         this.group.total = res.data.pages.total
@@ -133,6 +154,16 @@ export default {
     onPageChange (page) {
       this.group.page = page
       this.getGroupList()
+    },
+    onSearchClick () {
+      this.getGroupList()
+    },
+    reloadGroupList () {
+      this.isShowGroupModal = false
+      if (this.currentRole) {
+        // 添加用户组后刷新用户组列表页面
+        this.getGroupList()
+      }
     }
   }
 }
