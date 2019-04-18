@@ -8,16 +8,6 @@
         <Tabs
           type="line"
           v-model="currentTab">
-          <div slot="extra">
-            <Button
-              type="primary"
-              style="margin: 20px"
-              v-if="currentTab === 'auth'"
-              @click="isShowAuthModal = true"
-            >
-              添加权限
-            </Button>
-          </div>
           <TabPane
             label="用户组"
             name="group"
@@ -37,7 +27,7 @@
 </template>
 
 <script>
-import { Split, Button, Tabs, TabPane, Card } from 'iview'
+import { Split, Tabs, TabPane, Card } from 'iview'
 
 import RoleInfo from './role'
 import ResourceInfo from './resource'
@@ -47,7 +37,6 @@ export default {
   name: 'Authorization',
   components: {
     Split,
-    Button,
     Tabs,
     TabPane,
     Card,
@@ -59,7 +48,6 @@ export default {
     return {
       split: 0.2,
       currentTab: 'group',
-      isShowAuthModal: false,
       currentRole: null
     }
   },

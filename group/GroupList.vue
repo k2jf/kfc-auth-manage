@@ -3,17 +3,14 @@
   <div style="height: 100%;">
     <Row :gutter="16" class="margin-bottom">
       <Col span="14">
-      <Button
-        type="primary"
-        @click="isShowGroupModal = true"
-      >
+      <Button type="primary" @click="isShowGroupModal = true">
         添加已有用户组
       </Button>
       </Col>
       <Col span="10">
       <Input
         placeholder="搜索用户组"
-        v-model="group.filterName"
+        v-model="group.fuzzyName"
         @on-change="onSearchClick"></Input>
       </Col>
     </Row>
@@ -21,7 +18,7 @@
       :currentRole="currentRole"
       :isShowGroupModal="isShowGroupModal"
       v-if="currentRole"
-      @on-submit="reloadGroupList"
+      @on-submit="onReloadList"
       @on-close="isShowGroupModal = false" />
     <Table
       :columns="group.columns"
@@ -29,30 +26,28 @@
       size="small"
       :loading="group.loading"
       class="margin-bottom"></Table>
-    <Page
-      :total="group.total"
-      class="page-container"
-      @on-change="onPageChange"
-    />
+    <ConfirmModal ref="confirmModal" @transfer-ok="onDeleteClick"></ConfirmModal>
   </div>
 </template>
+
 <script>
 // eslint-disable-next-line
-import { Table, Page, Icon, Col, Row, Button, Input } from 'iview'
+import { Table, Icon, Col, Row, Button, Input } from 'iview'
 import GroupEdit from './GroupEdit.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
-import { api } from '../api'
+import api from '../api'
 
 export default {
   name: 'GroupList',
   components: {
     Table,
-    Page,
     Row,
     Col,
     Button,
     Input,
-    GroupEdit
+    GroupEdit,
+    ConfirmModal
   },
   props: {
     currentRole: {
@@ -66,16 +61,14 @@ export default {
   data () {
     return {
       isShowGroupModal: false,
+      id: null, // 删除id
       group: {
-        filterName: '',
-        page: 1,
-        size: 10,
-        total: 0,
+        fuzzyName: '',
         loading: false,
         data: [],
         columns: [
           { title: '名称', key: 'name', minWidth: 110 },
-          { title: '描述', key: 'email', minWidth: 130 },
+          { title: '描述', key: 'description', minWidth: 130 },
           {
             title: '操作',
             width: 100,
@@ -88,7 +81,7 @@ export default {
                   },
                   on: {
                     click: () => {
-                      this.deleteGroup(params.row.name)
+                      this.showConfirmModal(params.row.id)
                     }
                   }
                 },
@@ -130,35 +123,39 @@ export default {
   },
   methods: {
     // 删除用户组
-    deleteGroup (name) {
-      this.$axios.put(`${api.roles}/${this.currentRole.id}/remove`, { users: [{ name: name }] }).then(res => {
+    onDeleteClick () {
+      this.$axios.delete(`${api.roles}/${this.currentRole.id}/usrgrps/${this.id}`).then(res => {
+        this.$Message.success('删除成功！')
         this.getGroupList()
+      })
+    },
+    showConfirmModal (id) {
+      this.id = id
+      this.$refs.confirmModal.handleModal({
+        content: '是否确认删除？'
       })
     },
     // 获取用户组列表
     getGroupList () {
-      this.group.loading = true
-      let { page, size } = this.group
-      let name = this.currentRole.name
+      let roleId = this.currentRole.id
+      let url = `${api.groups}?roleId=${roleId}`
 
-      if (this.group.filterName) {
-        // url + 过滤条件
+      this.group.loading = true
+
+      if (this.group.fuzzyName) {
+        url += `&fuzzyName=${this.group.fuzzyName}`
       }
-      this.$axios.get(`${api.users}/?page=${page}&size=${size}&rolename=${name}`).then(res => {
-        this.group.data = res.data.result
-        this.group.total = res.data.pages.total
+
+      this.$axios.get(url).then(res => {
+        this.group.data = res.data.body.userGroups
+      }).finally(() => {
         this.group.loading = false
       })
-    },
-    // 切换页数
-    onPageChange (page) {
-      this.group.page = page
-      this.getGroupList()
     },
     onSearchClick () {
       this.getGroupList()
     },
-    reloadGroupList () {
+    onReloadList () {
       this.isShowGroupModal = false
       if (this.currentRole) {
         // 添加用户组后刷新用户组列表页面

@@ -7,7 +7,7 @@
     @on-cancel="onClickCancel">
     <Form
       :model="role"
-      :rules="ruleValidate"
+      :rules="rules"
       :label-width="80"
       ref="formValidate">
       <FormItem label="名称" prop="name">
@@ -27,7 +27,7 @@
 <script>
 import { Modal, Input, Form, FormItem } from 'iview'
 
-import { api } from '../api'
+import api from '../api'
 
 export default {
   name: 'RoleEdit',
@@ -50,7 +50,7 @@ export default {
         name: '',
         description: ''
       },
-      ruleValidate: {
+      rules: {
         name: [
           { required: true, message: '名称不能为空', trigger: 'blur' }
         ]
@@ -68,12 +68,12 @@ export default {
     // 新建角色
     onClickOk () {
       this.$refs.formValidate.validate((valid) => {
-        this.$emit('on-submit')
-        if (valid) {
-          this.$axios.post(`${api.roles}`, this.role).then(res => {
-            this.$refs.formValidate.resetFields()
-          })
-        }
+        if (!valid) return
+        this.$axios.post(`${api.roles}`, this.role).then(res => {
+          this.$Message.success('新建成功！')
+          this.$emit('on-submit')
+          this.$refs.formValidate.resetFields()
+        })
       })
     },
     onClickCancel () {

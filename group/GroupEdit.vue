@@ -25,7 +25,7 @@
 import { Modal } from 'iview'
 import K2Transfer from '@/components/kfc-k2transfer'
 
-import { api } from '../api'
+import api from '../api'
 
 export default {
   name: 'GroupEdit',
@@ -48,8 +48,6 @@ export default {
       isShowModal: this.isShowGroupModal,
       group: {
         titles: ['未选用户组', '已选用户组'],
-        filterKey: 'id',
-        filterLabel: 'name',
         data: [],
         selectKeys: []
       }
@@ -59,8 +57,8 @@ export default {
     isShowGroupModal: {
       handler (curVal, oldVal) {
         this.isShowModal = curVal
-        // 清空选中参数
-        this.group.selectKeys.splice(0, this.group.data.length)
+        // 清空选中用户组
+        this.group.selectKeys.splice(0, this.group.selectKeys.length)
         if (curVal) {
           this.getGroupList()
         }
@@ -70,22 +68,29 @@ export default {
   methods: {
     // 添加用户组
     onClickOk () {
-      this.$emit('on-close')
-      // this.$axios.put(`${api.roles}/${this.currentRole.id}/add`, { users: users }).then(res => {
-      //   this.$emit('on-submit')
-      // })
+      let usrgrpIds = this.group.selectKeys.join(',')
+
+      this.$axios.put(`${api.roles}/${this.currentRole.id}/roles/${usrgrpIds}`).then(res => {
+        this.$Message.success('添加成功！')
+        this.$emit('on-submit')
+      })
     },
     onClickCancel () {
       this.$emit('on-close')
     },
     getGroupList () {
-      this.$axios.get(`${api.groups}?type=all`).then(res => {
-        this.group.data = res.data.result.map(item => {
+      // 获取所有用户组
+      this.$axios.get(`${api.groups}`).then(res => {
+        this.group.data = res.data.body.userGroups.map(item => {
           return {
             key: item.id,
             label: item.name
           }
         })
+      })
+      // 获取当前角色已有用户组列表
+      this.$axios.get(`${api.groups}?roleId=${this.currentRole.id}`).then(res => {
+        this.group.selectKeys = res.data.body.userGroups.map(item => item.id)
       })
     },
     handleChange (selection) {

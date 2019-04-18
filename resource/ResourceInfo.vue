@@ -4,17 +4,16 @@
     <Row :gutter="16" class="margin-bottom">
       <Col span="16">资源类型:
       <Select
-        :transfer="true"
+        transfer
         style="max-width:200px;margin-left:10px;"
-        v-model="resourceData.appResTypeId"
+        v-model="resourceData.typeId"
         @on-change="onTypeChange">
-        <template v-for="item in resourceTypeList">
-          <Option
-            :value="item.appResTypeId"
-            :key="item.appResTypeId">
-            {{ item.appResTypeName }}
-          </Option>
-        </template>
+        <Option
+          :value="item.id"
+          v-for="item in resourceTypeList"
+          :key="item.id">
+          {{ item.name }}
+        </Option>
       </Select>
       <Button
         type="primary"
@@ -26,8 +25,8 @@
       </Col>
       <Col span="8">
       <Input
-        placeholder="搜索资源个例id"
-        v-model="resourceData.appResInfoId"
+        placeholder="搜索资源个例"
+        v-model="resourceData.fuzzyName"
         @on-blur="onSearchClick"></Input>
       </Col>
     </Row>
@@ -35,8 +34,9 @@
       :currentRole="currentRole"
       :resourceTypeList="resourceTypeList"
       :isShowAuthModal="isShowAuthModal"
+      :typeId="resourceData.typeId"
       v-if="currentRole"
-      @on-submit="getPermission"
+      @on-submit="getSubmitResource"
       @on-close="isShowAuthModal = false" />
     <Table
       :columns="resourceData.columns"
@@ -44,19 +44,17 @@
       size="small"
       :loading="resourceData.loading"
       class="margin-bottom"></Table>
-    <Page
-      :total="resourceData.total"
-      class="page-container"
-      @on-change="onPageChange"
-    />
+    <ConfirmModal ref="confirmModal" @transfer-ok="onDeleteClick"></ConfirmModal>
   </div>
 </template>
+
 <script>
 // eslint-disable-next-line
-import { Col, Row, Input, Select, Option, Table, Page, Icon, Button } from 'iview'
+import { Col, Row, Input, Select, Option, Table, Page, Icon, Button} from 'iview'
 import ResourceEdit from './ResourceEdit.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
-import { api } from '../api'
+import api from '../api'
 
 export default {
   name: 'ResourceInfo',
@@ -67,9 +65,9 @@ export default {
     Select,
     Option,
     Table,
-    Page,
     Button,
-    ResourceEdit
+    ResourceEdit,
+    ConfirmModal
   },
   props: {
     currentRole: {
@@ -83,26 +81,15 @@ export default {
   data () {
     return {
       isShowAuthModal: false,
+      id: null, // 删除id
       resourceData: {
-        page: 1,
-        size: 10,
-        total: 0,
         loading: false,
-        appResInfoId: '',
-        subjectType: 'role',
-        appResTypeId: '',
-        data: [],
+        fuzzyName: '',
+        typeId: '',
+        data: [{ id: 1, resource: 'name' }],
         columns: [
-          { title: '资源个例id', key: 'appResInfoId', minWidth: 110 },
-          { title: '资源个例名称', key: 'appResInfoName', minWidth: 130 },
-          { title: '权限',
-            minWidth: 100,
-            render: (h, params) => {
-              return h(
-                'span', params.row.operations.join(',')
-              )
-            }
-          },
+          { title: '资源名称', key: 'resource', minWidth: 80 },
+          { title: '权限', key: 'operations', minWidth: 80 },
           {
             title: '操作',
             width: 70,
@@ -115,7 +102,7 @@ export default {
                   },
                   on: {
                     click: () => {
-                      this.deleteResource(params.row.appResInfoId)
+                      this.showConfirmModal(params.row.id)
                     }
                   }
                 },
@@ -142,7 +129,7 @@ export default {
   watch: {
     currentRole: {
       handler (curVal, oldVal) {
-        if (curVal && curVal.id && this.resourceData.appResTypeId) {
+        if (curVal && curVal.id && this.resourceData.typeId) {
           this.getResourceData()
         }
       }
@@ -150,8 +137,8 @@ export default {
   },
   mounted () {
     // 获取资源类型列表
-    this.$axios.get(`${api.resourceTypes}?type=all`).then(res => {
-      this.resourceTypeList = res.data.result
+    this.$axios.get(`${api.restyps}`).then(res => {
+      this.resourceTypeList = res.data.body.restyps
     })
   },
   methods: {
@@ -159,42 +146,41 @@ export default {
     onSearchClick () {
       this.getResourceData()
     },
-    deleteResource (id) {
-      this.$axios.delete(`${api.permissions}?subjectId=${this.currentRole.id}&subjectType=role&appResTypeId=${this.resourceData.appResTypeId}&appResInfoId=${id}`).then(res => {
+    // 删除权限
+    onDeleteClick () {
+      this.$axios.delete(`${api.authorizes}?roleId=${this.currentRole.id}&subjectType=role&typeId=${this.resourceData.typeId}&appResInfoId=${this.id}`).then(res => {
+        this.$Message.success('删除成功！')
         this.getResourceData()
+      })
+    },
+    showConfirmModal (id) {
+      this.id = id
+      this.$refs.confirmModal.handleModal({
+        content: '是否确认删除？'
       })
     },
     // 获取资源列表
     getResourceData () {
       this.resourceData.loading = true
-      let { page, size, subjectType, appResTypeId, appResInfoId } = this.resourceData
-      let subjectId = this.currentRole.id
-      let url = `${api.resourceinfos}?page=${page}&size=${size}&subjectId=${subjectId}&subjectType=${subjectType}&appResTypeId=${encodeURIComponent(appResTypeId)}`
+      let { typeId } = this.resourceData
+      let { id } = this.currentRole
 
-      if (appResInfoId) {
-        url += `&appResInfoId=${appResInfoId}`
-      }
-
-      this.$axios.get(url).then(res => {
+      this.$axios.get(`${api.authorizes}?typeId=${typeId}&roleId=${id}`).then(res => {
+        this.resourceData.data = res.data.body.authorizes
+      }).finally(() => {
         this.resourceData.loading = false
-        this.resourceData.data = res.data.result
-        this.resourceData.total = res.data.pages.total
       })
     },
-    getPermission (permission) {
+    // 获取新增权限
+    getSubmitResource (resource) {
       this.isShowAuthModal = false
-      if (permission && permission.appResTypeId === this.resourceData.appResTypeId) {
+      if (resource && resource.typeId === this.resourceData.typeId) {
         // 新增权限类型为当前列表显示类型刷新页面
         this.getResourceData()
       }
     },
     // 资源类型改变
     onTypeChange () {
-      this.getResourceData()
-    },
-    // 切换页数
-    onPageChange (page) {
-      this.resourceData.page = page
       this.getResourceData()
     }
   }
