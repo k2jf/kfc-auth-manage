@@ -17,6 +17,7 @@
     <GroupEdit
       :currentRole="currentRole"
       :isShowGroupModal="isShowGroupModal"
+      :currentGroupList="getCurrentGroupList"
       v-if="currentRole"
       @on-submit="onReloadList"
       @on-close="isShowGroupModal = false" />
@@ -105,6 +106,11 @@ export default {
           }
         ]
       }
+    }
+  },
+  computed: {
+    getCurrentGroupList () {
+      return this.group.data.map(item => item.id)
     }
   },
   watch: {

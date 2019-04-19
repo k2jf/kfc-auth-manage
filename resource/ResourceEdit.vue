@@ -87,7 +87,7 @@ export default {
       }
     },
     typeId: {
-      type: String
+      type: Number
     }
   },
   data () {
@@ -153,6 +153,8 @@ export default {
         this.$Message.success('新建成功！')
         this.$emit('on-submit', permission)
         this.$refs.formValidate.resetFields()
+      }).catch(() => {
+        this.$emit('on-close')
       })
     },
     onClickCancel () {

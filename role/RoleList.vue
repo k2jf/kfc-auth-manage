@@ -16,7 +16,7 @@
           class="c-pointer"
           slot="label"
         >{{ roleItem.name }}</span>
-        <span slot="extra" @click="showConfirmModal(roleItem.id)"><Icon
+        <span slot="extra" @click.prevent="showConfirmModal(roleItem.id)"><Icon
           type="ios-trash"
           size="16"
           color="#5cadff" /></span>

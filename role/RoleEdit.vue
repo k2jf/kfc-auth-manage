@@ -68,11 +68,16 @@ export default {
     // 新建角色
     onClickOk () {
       this.$refs.formValidate.validate((valid) => {
-        if (!valid) return
+        if (!valid) {
+          this.$emit('on-close')
+          return
+        }
         this.$axios.post(`${api.roles}`, this.role).then(res => {
           this.$Message.success('新建成功！')
           this.$emit('on-submit')
           this.$refs.formValidate.resetFields()
+        }).catch(() => {
+          this.$emit('on-close')
         })
       })
     },

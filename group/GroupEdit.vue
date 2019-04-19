@@ -41,6 +41,10 @@ export default {
     isShowGroupModal: {
       type: Boolean,
       required: true
+    },
+    currentGroupList: {
+      type: Array,
+      required: false
     }
   },
   data () {
@@ -49,7 +53,7 @@ export default {
       group: {
         titles: ['未选用户组', '已选用户组'],
         data: [],
-        selectKeys: []
+        selectKeys: [...this.currentGroupList]
       }
     }
   },
@@ -63,6 +67,11 @@ export default {
           this.getGroupList()
         }
       }
+    },
+    currentGroupList: {
+      handler (curVal, oldVal) {
+        this.group.selectKeys = [...curVal]
+      }
     }
   },
   methods: {
@@ -73,6 +82,8 @@ export default {
       this.$axios.put(`${api.roles}/${this.currentRole.id}/roles/${usrgrpIds}`).then(res => {
         this.$Message.success('添加成功！')
         this.$emit('on-submit')
+      }).catch(() => {
+        this.$emit('on-close')
       })
     },
     onClickCancel () {
@@ -87,10 +98,6 @@ export default {
             label: item.name
           }
         })
-      })
-      // 获取当前角色已有用户组列表
-      this.$axios.get(`${api.groups}?roleId=${this.currentRole.id}`).then(res => {
-        this.group.selectKeys = res.data.body.userGroups.map(item => item.id)
       })
     },
     handleChange (selection) {

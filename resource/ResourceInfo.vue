@@ -85,7 +85,7 @@ export default {
       resourceData: {
         loading: false,
         fuzzyName: '',
-        typeId: '',
+        typeId: 0,
         data: [{ id: 1, resource: 'name' }],
         columns: [
           { title: '资源名称', key: 'resource', minWidth: 80 },
